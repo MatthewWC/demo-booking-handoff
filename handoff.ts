@@ -12,6 +12,7 @@
 
 import { basename, join, resolve } from "path";
 import { parseArgs } from "util";
+import { VERSION } from "./version";
 
 // ---------- Options ----------
 
@@ -33,7 +34,7 @@ const EXECUTABLE = basename(process.execPath);
 const COMMAND = EXECUTABLE.replace(/\.exe$/i, "") === "bun" ? "bun handoff.ts" : EXECUTABLE;
 
 const HELP = [
-  "Demo booking handoff",
+  `Demo booking handoff, version ${VERSION}`,
   "",
   "Reads booking events in order, updates the Salesforce Leads export, and writes",
   "the Slack messages and a run log to the output folder.",
@@ -52,6 +53,7 @@ const HELP = [
     ["--lead-source <text>", "Lead_Source on new Leads", DEFAULTS.leadSource],
     ["--review-channel <name>", "Slack channel for flagged bookings", DEFAULTS.reviewChannel],
     ["--timezone <zone>", "Time zone for demo times", DEFAULTS.timezone],
+    ["-v, --version", "Show the version", ""],
     ["-h, --help", "Show this help", ""],
   ].map(([option, what, fallback]) => `  ${option.padEnd(28)}${what.padEnd(40)}${fallback ? `default: ${fallback}` : ""}`.trimEnd()),
   "",
@@ -533,6 +535,10 @@ async function readOptions() {
     console.log(HELP);
     process.exit(0);
   }
+  if (flags.version) {
+    console.log(VERSION);
+    process.exit(0);
+  }
 
   const midMarketMin = Number(flags["mid-market-min"] ?? DEFAULTS.midMarketMin);
   if (!Number.isInteger(midMarketMin) || midMarketMin < 2) fail("--mid-market-min must be a whole number, 2 or more");
@@ -583,6 +589,7 @@ function parseOptions() {
         "lead-source": { type: "string" },
         "review-channel": { type: "string" },
         timezone: { type: "string" },
+        version: { type: "boolean", short: "v" },
         help: { type: "boolean", short: "h" },
       },
     }).values;

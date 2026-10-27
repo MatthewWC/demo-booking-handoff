@@ -11,6 +11,8 @@ You need Bun 1.4 or newer, which runs TypeScript directly, so there's nothing el
 - macOS or Linux: `curl -fsSL https://bun.sh/install | bash`
 - Windows: `powershell -c "irm bun.sh/install.ps1 | iex"`
 
+No Bun? Download a [ready-made executable](#executables-no-bun-needed) instead.
+
 Then:
 
 ```
@@ -37,26 +39,22 @@ Running it again rebuilds the outputs from the starter pack, so the results are 
 
 Optional TypeScript check: `bun install`, then `bun run typecheck`.
 
-## Build a single executable (optional)
+## Executables (no Bun needed)
 
-Bun can bundle the script and its runtime into one file, so whoever runs it doesn't need Bun installed:
+Each executable bundles the script with its runtime, so it runs on its own. Every push to `main` publishes them as a new [release](https://github.com/MatthewWC/demo-booking-handoff/releases), bumping the patch number (v0.0.1, v0.0.2, ...). The latest ones:
 
-```
-bun run build
-```
-
-That builds four files into `dist/`. Each is 90 to 115 MB, because the runtime is inside.
-
-| File | For |
+| Download | For |
 |---|---|
-| `handoff-windows-x64.exe` | Windows |
-| `handoff-macos-arm64` | Macs with Apple Silicon (M1 or newer) |
-| `handoff-macos-x64` | Intel Macs |
-| `handoff-linux-x64` | Linux |
+| [handoff-windows-x64.exe](https://github.com/MatthewWC/demo-booking-handoff/releases/latest/download/handoff-windows-x64.exe) | Windows |
+| [handoff-macos-arm64](https://github.com/MatthewWC/demo-booking-handoff/releases/latest/download/handoff-macos-arm64) | Macs with Apple Silicon (M1 or newer) |
+| [handoff-macos-x64](https://github.com/MatthewWC/demo-booking-handoff/releases/latest/download/handoff-macos-x64) | Intel Macs |
+| [handoff-linux-x64](https://github.com/MatthewWC/demo-booking-handoff/releases/latest/download/handoff-linux-x64) | Linux |
 
-Run one from the project folder with the same options, for example `./dist/handoff-macos-arm64 --help`. To build just one, use `bun run build:windows`, `build:mac`, `build:mac-intel` or `build:linux`.
+Save it in the project folder (it reads `starter_pack/` from there) and run it with the same options, for example `./handoff-windows-x64.exe --help`. `--version` shows which release you have. Each file is 90 to 115 MB, because the runtime is inside.
 
-The Mac builds aren't notarized by Apple. If macOS blocks a copy you downloaded, clear the download flag first: `xattr -d com.apple.quarantine handoff-macos-arm64`.
+On a Mac or Linux, make the download runnable first: `chmod +x handoff-macos-arm64`. The Mac builds aren't notarized by Apple, so on a Mac also clear the download flag: `xattr -d com.apple.quarantine handoff-macos-arm64`.
+
+To build them yourself, run `bun run build`. The files land in `dist/`. To build just one, use `bun run build:windows`, `build:mac`, `build:mac-intel` or `build:linux`.
 
 ## Decisions beyond the written rules
 

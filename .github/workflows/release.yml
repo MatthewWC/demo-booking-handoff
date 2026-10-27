@@ -1,0 +1,63 @@
+name: Release
+
+# Every push to main checks the code, builds the four executables and publishes them as
+# a new release, bumping the patch number from the last release tag: v0.0.1, v0.0.2, ...
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write # to create the release and its tag
+
+# One release at a time, so two quick pushes can't claim the same version number.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # every tag, to find the last version
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - name: Pick the next version
+        id: version
+        run: |
+          last=$(git tag --list 'v*' --sort=-v:refname | head -n 1)
+          if [ -z "$last" ]; then
+            next=0.0.1
+          else
+            IFS=. read -r major minor patch <<< "${last#v}"
+            next="$major.$minor.$((patch + 1))"
+          fi
+          echo "Last release: ${last:-none}. This one: v$next"
+          echo "number=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Check the code
+        run: |
+          bun install --frozen-lockfile
+          bun run typecheck
+          bun handoff.ts
+          git diff --exit-code output/ # the committed output files must match what the code produces
+
+      - name: Build the executables
+        env:
+          VERSION: ${{ steps.version.outputs.number }}
+        run: |
+          echo "export const VERSION = \"$VERSION\";" > version.ts
+          bun run build
+          ./dist/handoff-linux-x64 --version
+          ./dist/handoff-linux-x64
+          git diff --exit-code output/ # the Linux executable gives the same results
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.version.outputs.number }}
+        run: gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes
