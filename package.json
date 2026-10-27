@@ -2,24 +2,17 @@
   "name": "demo-booking-handoff",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=22.18"
-  },
   "scripts": {
-    "start": "node handoff.ts",
-    "typecheck": "tsc",
-    "build": "npm run build:windows && npm run build:mac && npm run build:mac-intel && npm run build:linux",
+    "start": "bun handoff.ts",
+    "typecheck": "bunx --bun tsc",
+    "build": "bun run build:windows && bun run build:mac && bun run build:mac-intel && bun run build:linux",
     "build:windows": "bun build ./handoff.ts --compile --minify --target bun-windows-x64 --outfile dist/handoff-windows-x64.exe",
     "build:mac": "bun build ./handoff.ts --compile --minify --target bun-darwin-arm64 --outfile dist/handoff-macos-arm64",
     "build:mac-intel": "bun build ./handoff.ts --compile --minify --target bun-darwin-x64 --outfile dist/handoff-macos-x64",
     "build:linux": "bun build ./handoff.ts --compile --minify --target bun-linux-x64 --outfile dist/handoff-linux-x64"
   },
   "devDependencies": {
-    "@types/node": "^24.19.2",
-    "bun": "1.4.4",
+    "@types/bun": "^1.4.4",
     "typescript": "^7.0.2"
-  },
-  "allowScripts": {
-    "bun@1.4.4": true
   }
 }

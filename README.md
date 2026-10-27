@@ -6,19 +6,24 @@ The written answer (custom script, Zapier or Flow?) is in [WRITTEN_ANSWER.md](WR
 
 ## Run it
 
-You need Node.js 22.18 or newer. Check with `node --version`, or get the LTS version from https://nodejs.org. Node runs TypeScript files directly, so there's nothing else to install.
+You need Bun 1.4 or newer, which runs TypeScript directly, so there's nothing else to install. Check with `bun --version`, or install it:
+
+- macOS or Linux: `curl -fsSL https://bun.sh/install | bash`
+- Windows: `powershell -c "irm bun.sh/install.ps1 | iex"`
+
+Then:
 
 ```
 git clone https://github.com/MatthewWC/demo-booking-handoff.git
 cd demo-booking-handoff
-node handoff.ts
+bun handoff.ts
 ```
 
-No git? On GitHub, click Code, then Download ZIP. Unzip it, open a terminal in that folder and run `node handoff.ts`.
+No git? On GitHub, click Code, then Download ZIP. Unzip it, open a terminal in that folder and run `bun handoff.ts`.
 
 When it finishes, it prints a summary: `Processed 11 events: 1 created, 4 updated, 2 skipped, 4 flagged, 0 errors.`
 
-Every option defaults to the brief's rules, so that one command is all you need. To change something, like a rep's name, the provider cutoff, the review channel, the time zone or the file paths, see `node handoff.ts --help`.
+Every option defaults to the brief's rules, so that one command is all you need. To change something, like a rep's name, the provider cutoff, the review channel, the time zone or the file paths, see `bun handoff.ts --help`.
 
 It reads `starter_pack/` as-is and writes three files to `output/`:
 
@@ -30,15 +35,14 @@ It reads `starter_pack/` as-is and writes three files to `output/`:
 
 Running it again rebuilds the outputs from the starter pack, so the results are the same every time.
 
-Optional TypeScript check: `npm install`, then `npm run typecheck`.
+Optional TypeScript check: `bun install`, then `bun run typecheck`.
 
 ## Build a single executable (optional)
 
-Bun can bundle the script and its runtime into one file, so whoever runs it doesn't need Node:
+Bun can bundle the script and its runtime into one file, so whoever runs it doesn't need Bun installed:
 
 ```
-npm install
-npm run build
+bun run build
 ```
 
 That builds four files into `dist/`. Each is 90 to 115 MB, because the runtime is inside.
@@ -50,7 +54,7 @@ That builds four files into `dist/`. Each is 90 to 115 MB, because the runtime i
 | `handoff-macos-x64` | Intel Macs |
 | `handoff-linux-x64` | Linux |
 
-Run one from the project folder with the same options, for example `./dist/handoff-macos-arm64 --help`. To build just one, use `npm run build:windows`, `build:mac`, `build:mac-intel` or `build:linux`.
+Run one from the project folder with the same options, for example `./dist/handoff-macos-arm64 --help`. To build just one, use `bun run build:windows`, `build:mac`, `build:mac-intel` or `build:linux`.
 
 The Mac builds aren't notarized by Apple. If macOS blocks a copy you downloaded, clear the download flag first: `xattr -d com.apple.quarantine handoff-macos-arm64`.
 

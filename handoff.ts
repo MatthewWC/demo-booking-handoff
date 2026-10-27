@@ -1,18 +1,17 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 // Demo booking handoff.
 //
 // Reads the scheduling tool's webhook events in the order they arrived, keeps the
 // Salesforce Leads export up to date, and writes the Slack messages the Sales team
 // would get, plus a run log with one line per event.
 //
-// Run (Node 22.18 or newer runs TypeScript directly, nothing to install):
-//   node handoff.ts           the brief's rules on the starter pack
-//   node handoff.ts --help    every option, like the owners or the provider cutoff
-// Or build a single executable with Bun (npm run build) and run that the same way.
+// Run with Bun, which runs TypeScript directly:
+//   bun handoff.ts           the brief's rules on the starter pack
+//   bun handoff.ts --help    every option, like the owners or the provider cutoff
+// Or build a single executable (bun run build) and run that the same way.
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
-import { parseArgs } from "node:util";
+import { basename, join, resolve } from "path";
+import { parseArgs } from "util";
 
 // ---------- Options ----------
 
@@ -29,9 +28,9 @@ const DEFAULTS = {
   timezone: "America/Los_Angeles",
 };
 
-// How it was started, for the help text: "node handoff.ts", or the executable's own name once it's built.
-const RUNTIME = basename(process.execPath).replace(/\.exe$/i, "");
-const COMMAND = RUNTIME === "node" || RUNTIME === "bun" ? `${RUNTIME} handoff.ts` : basename(process.execPath);
+// How it was started, for the help text: "bun handoff.ts", or the executable's own name once it's built.
+const EXECUTABLE = basename(process.execPath);
+const COMMAND = EXECUTABLE.replace(/\.exe$/i, "") === "bun" ? "bun handoff.ts" : EXECUTABLE;
 
 const HELP = [
   "Demo booking handoff",
@@ -72,7 +71,7 @@ const {
   leadSource: LEAD_SOURCE,
   reviewChannel: REVIEW_CHANNEL,
   timezone: TIMEZONE,
-} = readOptions();
+} = await readOptions();
 
 // A gmail.com address says nothing about which practice someone works at.
 const PERSONAL_EMAIL_DOMAINS = new Set([
@@ -124,7 +123,7 @@ interface Problem {
 
 // ---------- State for this run ----------
 
-const { header, leads } = readLeads(LEADS_FILE);
+const { header, leads } = await readLeads(LEADS_FILE);
 const leadsByEmail = new Map(leads.filter((l) => l.Email).map((l) => [cleanEmail(l.Email), l]));
 // The export's IDs are simple placeholders (00Q001...). In Salesforce, the system assigns the ID.
 let lastLeadNumber = Math.max(0, ...leads.map((l) => Number(l.Lead_ID.replace(/\D/g, "")) || 0));
@@ -135,9 +134,7 @@ const applied = new Map<string, { file: string; start: string; lead: Lead }>();
 
 // ---------- Main ----------
 
-const eventFiles = readdirSync(EVENTS_DIR)
-  .filter((f) => f.endsWith(".json"))
-  .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+const eventFiles = listEventFiles(EVENTS_DIR);
 
 const runLog: string[] = [];
 const slackMessages: string[] = [];
@@ -147,7 +144,7 @@ for (const fileName of eventFiles) {
   const file = fileName.replace(/\.json$/, "");
   let result: Result;
   try {
-    result = processEvent(file, readFileSync(join(EVENTS_DIR, fileName), "utf8"));
+    result = processEvent(file, await Bun.file(join(EVENTS_DIR, fileName)).text());
   } catch (err) {
     result = { action: "ERROR", reason: `couldn't be processed (${(err as Error).message})` };
   }
@@ -156,11 +153,11 @@ for (const fileName of eventFiles) {
   if (result.slack) slackMessages.push([...result.slack, `Source: ${file}`].join("\n"));
 }
 
-mkdirSync(OUTPUT_DIR, { recursive: true });
+// Bun.write creates the output folder if it isn't there yet.
 const rows = leads.map((lead) => header.map((column) => (lead as Record<string, string>)[column] ?? ""));
-writeFileSync(join(OUTPUT_DIR, "updated_salesforce_leads.csv"), toCsv([header, ...rows]));
-writeFileSync(join(OUTPUT_DIR, "slack_notifications.txt"), slackMessages.join("\n\n") + "\n");
-writeFileSync(join(OUTPUT_DIR, "run_log.txt"), runLog.join("\n") + "\n");
+await Bun.write(join(OUTPUT_DIR, "updated_salesforce_leads.csv"), toCsv([header, ...rows]));
+await Bun.write(join(OUTPUT_DIR, "slack_notifications.txt"), slackMessages.join("\n\n") + "\n");
+await Bun.write(join(OUTPUT_DIR, "run_log.txt"), runLog.join("\n") + "\n");
 
 console.log(
   `Processed ${eventFiles.length} events: ${counts.CREATED} created, ${counts.UPDATED} updated, ` +
@@ -530,7 +527,7 @@ function sentence(text: string): string {
 
 // ---------- Reading the options ----------
 
-function readOptions() {
+async function readOptions() {
   const flags = parseOptions();
   if (flags.help) {
     console.log(HELP);
@@ -558,14 +555,24 @@ function readOptions() {
     timezone,
   };
   const where = "Run it from the project folder, or point to it with";
-  if (!existsSync(options.eventsDir)) fail(`can't find the events folder ${options.eventsDir}. ${where} --events`);
-  if (!existsSync(options.leadsFile)) fail(`can't find the Leads file ${options.leadsFile}. ${where} --leads`);
+  if (!listEventFiles(options.eventsDir).length) fail(`can't find any event files in ${options.eventsDir}. ${where} --events`);
+  if (!(await Bun.file(options.leadsFile).exists())) fail(`can't find the Leads file ${options.leadsFile}. ${where} --leads`);
   return options;
+}
+
+// The .json files in a folder, in arrival order (event_02 before event_10). None if the folder is missing.
+function listEventFiles(folder: string): string[] {
+  try {
+    return [...new Bun.Glob("*.json").scanSync({ cwd: folder })].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+  } catch {
+    return [];
+  }
 }
 
 function parseOptions() {
   try {
     return parseArgs({
+      args: Bun.argv.slice(2),
       options: {
         events: { type: "string" },
         leads: { type: "string" },
@@ -603,10 +610,9 @@ function fail(message: string): never {
 
 // ---------- CSV ----------
 
-function readLeads(path: string): { header: string[]; leads: Lead[] } {
-  let text = readFileSync(path, "utf8");
-  if (text.charCodeAt(0) === 0xfeff) text = text.slice(1); // Excel-style exports often start with a byte-order mark
-  const [header, ...rows] = parseCsv(text);
+// Bun.file().text() also drops the byte-order mark that Excel-style exports often start with.
+async function readLeads(path: string): Promise<{ header: string[]; leads: Lead[] }> {
+  const [header, ...rows] = parseCsv(await Bun.file(path).text());
   const missing = COLUMNS.filter((c) => !header?.includes(c));
   if (!header || missing.length) throw new Error(`${path} is missing columns: ${missing.join(", ")}`);
   const leads = rows
