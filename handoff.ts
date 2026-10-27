@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // Demo booking handoff.
 //
 // Reads the scheduling tool's webhook events in the order they arrived, keeps the
@@ -5,24 +6,67 @@
 // would get, plus a run log with one line per event.
 //
 // Run (Node 22.18 or newer runs TypeScript directly, nothing to install):
-//   node handoff.ts
-// Optional: node handoff.ts <starter pack folder> <output folder>
+//   node handoff.ts           the brief's rules on the starter pack
+//   node handoff.ts --help    every option, like the owners or the provider cutoff
 
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
 
-const STARTER_DIR = process.argv[2] ?? join(import.meta.dirname, "starter_pack");
-const OUTPUT_DIR = process.argv[3] ?? join(import.meta.dirname, "output");
+// ---------- Options ----------
 
-// Business rules from the brief
-const LEAD_SOURCE = "Scheduling Tool - Demo";
-const SMB_OWNER = "Jordan Lee"; // 1 to 9 providers
-const MID_MARKET_OWNER = "Priya Shah"; // 10 or more providers
-const MID_MARKET_MIN = 10;
+// The brief's rules and the starter pack's layout. Each one can be changed with an option.
+const DEFAULTS = {
+  events: "starter_pack/events",
+  leads: "starter_pack/salesforce_leads.csv",
+  out: "output",
+  smbOwner: "Jordan Lee",
+  midMarketOwner: "Priya Shah",
+  midMarketMin: 10, // 1 to 9 providers is SMB, 10 or more is Mid-Market
+  leadSource: "Scheduling Tool - Demo",
+  reviewChannel: "#demo-handoff-review", // one shared channel, so flagged bookings don't sit in one rep's DMs
+  timezone: "America/Los_Angeles",
+};
 
-// Flags go to one shared channel with the likely owner tagged, so they don't sit in one person's DMs.
-const REVIEW_CHANNEL = "#demo-handoff-review";
-const PACIFIC = "America/Los_Angeles";
+const HELP = [
+  "Demo booking handoff",
+  "",
+  "Reads booking events in order, updates the Salesforce Leads export, and writes",
+  "the Slack messages and a run log to the output folder.",
+  "",
+  "Usage: node handoff.ts [options]",
+  "",
+  "Options:",
+  ...[
+    ["--events <folder>", "Booking event JSON files", DEFAULTS.events],
+    ["--leads <file>", "Salesforce Leads CSV export", DEFAULTS.leads],
+    ["-o, --out <folder>", "Where the three output files go", DEFAULTS.out],
+    ["--smb-owner <name>", "Owner for new SMB practices", DEFAULTS.smbOwner],
+    ["--mid-market-owner <name>", "Owner for new Mid-Market practices", DEFAULTS.midMarketOwner],
+    ["--mid-market-min <number>", "Provider count where Mid-Market starts", String(DEFAULTS.midMarketMin)],
+    ["--lead-source <text>", "Lead_Source on new Leads", DEFAULTS.leadSource],
+    ["--review-channel <name>", "Slack channel for flagged bookings", DEFAULTS.reviewChannel],
+    ["--timezone <zone>", "Time zone for demo times", DEFAULTS.timezone],
+    ["-h, --help", "Show this help", ""],
+  ].map(([option, what, fallback]) => `  ${option.padEnd(28)}${what.padEnd(40)}${fallback ? `default: ${fallback}` : ""}`.trimEnd()),
+  "",
+  "Examples:",
+  "  node handoff.ts",
+  '  node handoff.ts --smb-owner "Sam Rivera" --mid-market-min 15',
+  "  node handoff.ts --leads exports/leads.csv --out runs/latest",
+].join("\n");
+
+const {
+  eventsDir: EVENTS_DIR,
+  leadsFile: LEADS_FILE,
+  outputDir: OUTPUT_DIR,
+  smbOwner: SMB_OWNER,
+  midMarketOwner: MID_MARKET_OWNER,
+  midMarketMin: MID_MARKET_MIN,
+  leadSource: LEAD_SOURCE,
+  reviewChannel: REVIEW_CHANNEL,
+  timezone: TIMEZONE,
+} = readOptions();
 
 // A gmail.com address says nothing about which practice someone works at.
 const PERSONAL_EMAIL_DOMAINS = new Set([
@@ -74,7 +118,7 @@ interface Problem {
 
 // ---------- State for this run ----------
 
-const { header, leads } = readLeads(join(STARTER_DIR, "salesforce_leads.csv"));
+const { header, leads } = readLeads(LEADS_FILE);
 const leadsByEmail = new Map(leads.filter((l) => l.Email).map((l) => [cleanEmail(l.Email), l]));
 // The export's IDs are simple placeholders (00Q001...). In Salesforce, the system assigns the ID.
 let lastLeadNumber = Math.max(0, ...leads.map((l) => Number(l.Lead_ID.replace(/\D/g, "")) || 0));
@@ -85,8 +129,7 @@ const applied = new Map<string, { file: string; start: string; lead: Lead }>();
 
 // ---------- Main ----------
 
-const eventsDir = join(STARTER_DIR, "events");
-const eventFiles = readdirSync(eventsDir)
+const eventFiles = readdirSync(EVENTS_DIR)
   .filter((f) => f.endsWith(".json"))
   .sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 
@@ -98,7 +141,7 @@ for (const fileName of eventFiles) {
   const file = fileName.replace(/\.json$/, "");
   let result: Result;
   try {
-    result = processEvent(file, readFileSync(join(eventsDir, fileName), "utf8"));
+    result = processEvent(file, readFileSync(join(EVENTS_DIR, fileName), "utf8"));
   } catch (err) {
     result = { action: "ERROR", reason: `couldn't be processed (${(err as Error).message})` };
   }
@@ -173,12 +216,12 @@ function bookExistingLead(file: string, event: WebhookEvent, lead: Lead, start: 
   const current = lead.Demo_Scheduled_At;
   if (!p.old_invitee && lead.Status === "Demo Scheduled" && current) {
     if (sameTime(current, start)) {
-      return { action: "SKIPPED", reason: `${person} (${lead.Lead_ID}) already has this demo on record for ${pacificTime(start)}, so nothing changed` };
+      return { action: "SKIPPED", reason: `${person} (${lead.Lead_ID}) already has this demo on record for ${teamTime(start)}, so nothing changed` };
     }
     // A second booking while another demo is still coming up: ask which one is real.
     if (toDate(current) > toDate(event.created_at)) {
       return flag(event, `${person} at ${lead.Company}`, when, [lead.Owner], [{
-        what: `${person} already has a different demo coming up on ${pacificTime(current)}`,
+        what: `${person} already has a different demo coming up on ${teamTime(current)}`,
         fix: "check which time is right and cancel the other booking",
       }]);
     }
@@ -194,11 +237,11 @@ function bookExistingLead(file: string, event: WebhookEvent, lead: Lead, start: 
   if (p.old_invitee) {
     return {
       action: "UPDATED",
-      reason: `${person} (${lead.Lead_ID}), demo rescheduled ${oldTime ? `from ${pacificTime(oldTime)} ` : ""}to ${pacificTime(start)}`,
+      reason: `${person} (${lead.Lead_ID}), demo rescheduled ${oldTime ? `from ${teamTime(oldTime)} ` : ""}to ${teamTime(start)}`,
       slack: [
         `To: @${lead.Owner}`,
         `Demo rescheduled: ${card}`,
-        `New time: ${when}${oldTime ? ` (was ${pacificTime(oldTime)})` : ""}`,
+        `New time: ${when}${oldTime ? ` (was ${teamTime(oldTime)})` : ""}`,
         `Lead ${lead.Lead_ID} updated with the new time.`,
       ],
     };
@@ -206,7 +249,7 @@ function bookExistingLead(file: string, event: WebhookEvent, lead: Lead, start: 
   const change = before === "Demo Scheduled" ? "new demo time set" : `status changed from ${before || "blank"} to Demo Scheduled`;
   return {
     action: "UPDATED",
-    reason: `${person} (${lead.Lead_ID}), ${change} for ${pacificTime(start)}${emailNote(p.email)}`,
+    reason: `${person} (${lead.Lead_ID}), ${change} for ${teamTime(start)}${emailNote(p.email)}`,
     slack: [`To: @${lead.Owner}`, `Demo booked: ${card}`, `When: ${when}`, `Lead ${lead.Lead_ID}: ${change}.`],
   };
 }
@@ -251,7 +294,7 @@ function bookNewLead(file: string, event: WebhookEvent, start: string): Result {
   }
   if (colleagues.length) {
     const list = colleagues.map((l) => {
-      const demo = l.Status === "Demo Scheduled" && l.Demo_Scheduled_At ? `, demo ${pacificTime(l.Demo_Scheduled_At)}` : "";
+      const demo = l.Status === "Demo Scheduled" && l.Demo_Scheduled_At ? `, demo ${teamTime(l.Demo_Scheduled_At)}` : "";
       return `${l.First_Name} ${l.Last_Name} (${l.Lead_ID}, ${l.Owner}${demo})`;
     });
     notes.push(`Already in Salesforce at this practice: ${list.join("; ")}.`);
@@ -285,13 +328,13 @@ function bookNewLead(file: string, event: WebhookEvent, start: string): Result {
   applied.set(p.uri, { file, start, lead });
 
   const team = size.owner === SMB_OWNER ? `SMB team, 1 to ${MID_MARKET_MIN - 1} providers` : `Mid-Market team, ${MID_MARKET_MIN}+ providers`;
-  const count = size.count || providers;
+  const count = size.count ? `${size.count} providers` : `provider count "${providers}"`;
   return {
     action: "CREATED",
-    reason: `new Lead ${lead.Lead_ID} for ${person} at ${practice} (${count} providers, assigned to ${size.owner}), demo ${pacificTime(start)}`,
+    reason: `new Lead ${lead.Lead_ID} for ${person} at ${practice} (${count}, assigned to ${size.owner}), demo ${teamTime(start)}`,
     slack: [
       `To: @${size.owner}`,
-      `New demo booked: ${person}, ${practice} (${count} providers)`,
+      `New demo booked: ${person}, ${practice} (${count})`,
       `When: ${when}`,
       `New Lead ${lead.Lead_ID} created and assigned to you (${team}).`,
       ...notes,
@@ -304,7 +347,7 @@ function handleCancel(event: WebhookEvent): Result {
   const p = event.payload;
   const name = nameOf(p);
   const start = p.scheduled_event?.start_time ?? "";
-  const slot = start ? pacificTime(start) : "unknown time";
+  const slot = start ? teamTime(start) : "unknown time";
 
   // A reschedule sends a new booking plus a cancel of the old slot. The new booking does the work,
   // so this half must not mark the demo canceled, whichever order the two arrive in.
@@ -314,7 +357,7 @@ function handleCancel(event: WebhookEvent): Result {
       action: "SKIPPED",
       reason: replacement
         ? `cancellation of ${name}'s ${slot} slot: it's the old half of a reschedule that ${replacement.file} already applied ` +
-          `(this cancel arrived after the new booking), so the demo stays ${pacificTime(replacement.start)}`
+          `(this cancel arrived after the new booking), so the demo stays ${teamTime(replacement.start)}`
         : `cancellation of ${name}'s ${slot} slot: it's the old half of a reschedule, so the Lead stays as is until the new booking arrives`,
     };
   }
@@ -327,7 +370,7 @@ function handleCancel(event: WebhookEvent): Result {
   const person = `${lead.First_Name} ${lead.Last_Name}`;
   // Only cancel the demo the Lead actually has. An old or out-of-order cancel leaves it alone.
   if (!start || !lead.Demo_Scheduled_At || !sameTime(lead.Demo_Scheduled_At, start)) {
-    const onLead = lead.Demo_Scheduled_At ? pacificTime(lead.Demo_Scheduled_At) : "none on record";
+    const onLead = lead.Demo_Scheduled_At ? teamTime(lead.Demo_Scheduled_At) : "none on record";
     return { action: "SKIPPED", reason: `cancellation of ${person}'s ${slot} slot doesn't match the demo on Lead ${lead.Lead_ID} (${onLead}), so the Lead was left as is` };
   }
 
@@ -435,20 +478,22 @@ function sameTime(a: string, b: string): boolean {
   return toDate(a).getTime() === toDate(b).getTime();
 }
 
-// "Thu Oct 8, 9:00 AM PT", like the example in the brief.
-function pacificTime(iso: string): string {
-  const t = dateParts(iso, PACIFIC, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-  return `${t.weekday} ${t.month} ${t.day}, ${t.hour}:${t.minute} ${t.dayPeriod} PT`;
+// The team's time, like the example in the brief: "Thu Oct 8, 9:00 AM PT".
+function teamTime(iso: string): string {
+  const t = dateParts(iso, TIMEZONE, {
+    weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "shortGeneric",
+  });
+  return `${t.weekday} ${t.month} ${t.day}, ${t.hour}:${t.minute} ${t.dayPeriod} ${t.timeZoneName}`;
 }
 
-// Pacific Time, plus the invitee's own time when they're elsewhere: "... PT (2:00 PM EDT their time)".
+// The team's time, plus the invitee's own time when they're elsewhere: "... PT (2:00 PM EDT their time)".
 function demoTime(iso: string, timeZone?: string): string {
-  if (!timeZone || timeZone === PACIFIC) return pacificTime(iso);
+  if (!timeZone || timeZone === TIMEZONE) return teamTime(iso);
   try {
     const t = dateParts(iso, timeZone, { hour: "numeric", minute: "2-digit", timeZoneName: "short" });
-    return `${pacificTime(iso)} (${t.hour}:${t.minute} ${t.dayPeriod} ${t.timeZoneName} their time)`;
+    return `${teamTime(iso)} (${t.hour}:${t.minute} ${t.dayPeriod} ${t.timeZoneName} their time)`;
   } catch {
-    return pacificTime(iso); // unknown time zone name
+    return teamTime(iso); // unknown time zone name
   }
 }
 
@@ -475,6 +520,77 @@ function plural(n: number, word: string): string {
 function sentence(text: string): string {
   const s = text.charAt(0).toUpperCase() + text.slice(1);
   return s.endsWith(".") ? s : `${s}.`;
+}
+
+// ---------- Reading the options ----------
+
+function readOptions() {
+  const flags = parseOptions();
+  if (flags.help) {
+    console.log(HELP);
+    process.exit(0);
+  }
+
+  const midMarketMin = Number(flags["mid-market-min"] ?? DEFAULTS.midMarketMin);
+  if (!Number.isInteger(midMarketMin) || midMarketMin < 2) fail("--mid-market-min must be a whole number, 2 or more");
+  const timezone = flags.timezone ?? DEFAULTS.timezone;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
+  } catch {
+    fail(`--timezone "${timezone}" isn't a time zone name. Try one like America/Los_Angeles`);
+  }
+
+  const options = {
+    eventsDir: pathOption(flags.events, DEFAULTS.events),
+    leadsFile: pathOption(flags.leads, DEFAULTS.leads),
+    outputDir: pathOption(flags.out, DEFAULTS.out),
+    smbOwner: textOption("smb-owner", flags["smb-owner"], DEFAULTS.smbOwner),
+    midMarketOwner: textOption("mid-market-owner", flags["mid-market-owner"], DEFAULTS.midMarketOwner),
+    midMarketMin,
+    leadSource: textOption("lead-source", flags["lead-source"], DEFAULTS.leadSource),
+    reviewChannel: textOption("review-channel", flags["review-channel"], DEFAULTS.reviewChannel),
+    timezone,
+  };
+  if (!existsSync(options.eventsDir)) fail(`can't find the events folder ${options.eventsDir}`);
+  if (!existsSync(options.leadsFile)) fail(`can't find the Leads file ${options.leadsFile}`);
+  return options;
+}
+
+function parseOptions() {
+  try {
+    return parseArgs({
+      options: {
+        events: { type: "string" },
+        leads: { type: "string" },
+        out: { type: "string", short: "o" },
+        "smb-owner": { type: "string" },
+        "mid-market-owner": { type: "string" },
+        "mid-market-min": { type: "string" },
+        "lead-source": { type: "string" },
+        "review-channel": { type: "string" },
+        timezone: { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+    }).values;
+  } catch (err) {
+    return fail((err as Error).message);
+  }
+}
+
+// Paths you type are relative to where you run the command. The defaults are relative to this script.
+function pathOption(value: string | undefined, fallback: string): string {
+  return value ? resolve(value) : join(import.meta.dirname, fallback);
+}
+
+function textOption(option: string, value: string | undefined, fallback: string): string {
+  const result = (value ?? fallback).trim();
+  if (!result) fail(`--${option} can't be empty`);
+  return result;
+}
+
+function fail(message: string): never {
+  console.error(`Error: ${message}\nRun "node handoff.ts --help" to see the options.`);
+  process.exit(1);
 }
 
 // ---------- CSV ----------
