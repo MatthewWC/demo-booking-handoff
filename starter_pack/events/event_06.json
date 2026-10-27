@@ -1,0 +1,38 @@
+{
+  "event": "invitee.canceled",
+  "created_at": "2026-10-02T21:18:36.000000Z",
+  "payload": {
+    "uri": "https://api.scheduling.example/scheduled_events/EV-1007/invitees/IN-5007",
+    "email": "ewatson@pinecrestclinic.com",
+    "name": "Emily Watson",
+    "first_name": "Emily",
+    "last_name": "Watson",
+    "status": "canceled",
+    "rescheduled": true,
+    "old_invitee": null,
+    "new_invitee": "https://api.scheduling.example/scheduled_events/EV-1009/invitees/IN-5009",
+    "timezone": "America/Los_Angeles",
+    "text_reminder_number": null,
+    "questions_and_answers": [
+      {
+        "question": "Practice name",
+        "answer": "Pinecrest Clinic"
+      },
+      {
+        "question": "How many providers are in your practice?",
+        "answer": "12"
+      }
+    ],
+    "scheduled_event": {
+      "uri": "https://api.scheduling.example/scheduled_events/EV-1007",
+      "name": "Spruce Product Demo",
+      "start_time": "2026-10-07T20:00:00.000000Z",
+      "end_time": "2026-10-07T20:30:00.000000Z"
+    },
+    "cancellation": {
+      "canceled_by": "Emily Watson",
+      "reason": "Rescheduled: conflict with clinic hours",
+      "canceler_type": "invitee"
+    }
+  }
+}

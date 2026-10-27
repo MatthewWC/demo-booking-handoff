@@ -1,0 +1,11 @@
+event_01: CREATED new Lead 00Q008 for Jessica Alvarez at Meridian Women's Health (4 providers, assigned to Jordan Lee), demo Thu Oct 8, 9:00 AM PT
+event_02: SKIPPED duplicate of event_01: the scheduling tool sent Jessica Alvarez's booking twice, so nothing changed
+event_03: UPDATED Maria Gonzalez (00Q001), status changed from Working to Demo Scheduled for Thu Oct 8, 2:30 PM PT (matched by email after ignoring capital letters and extra spaces)
+event_04: UPDATED Emily Watson (00Q006), status changed from Working to Demo Scheduled for Wed Oct 7, 1:00 PM PT
+event_05: UPDATED Emily Watson (00Q006), demo rescheduled from Wed Oct 7, 1:00 PM PT to Fri Oct 9, 11:00 AM PT
+event_06: SKIPPED cancellation of Emily Watson's Wed Oct 7, 1:00 PM PT slot: it's the old half of a reschedule that event_05 already applied (this cancel arrived after the new booking), so the demo stays Fri Oct 9, 11:00 AM PT
+event_07: FLAGGED Lena Fischer at Coastal Cardiology Associates: provider count "not sure - somewhere around 8-12?" straddles the 10-provider line between Jordan Lee and Priya Shah, so the owner is unclear. Sent for review; nothing changed in Salesforce
+event_08: FLAGGED Chris at Valley Health: no email address, so the booking can't be matched to Salesforce; no last name (Salesforce requires one on a Lead). Sent for review; nothing changed in Salesforce
+event_09: UPDATED Sarah Kim (00Q004), status changed from Demo Scheduled to Demo Canceled and the demo time cleared (was Tue Oct 6, 10:00 AM PT). Reason given: "We've decided to stay with our current vendor for now."
+event_10: FLAGGED Aisha Patel at Northstar Dermatology: Lead 00Q003 is already Converted (it's now an Account and Contact). Sent for review; nothing changed in Salesforce
+event_11: FLAGGED Dana Ortiz at Pinecrest Clinic: the practice already has 2 Leads owned by Priya Shah (12 providers on file), but 6 providers would assign Jordan Lee. Sent for review; nothing changed in Salesforce

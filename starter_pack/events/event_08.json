@@ -1,0 +1,33 @@
+{
+  "event": "invitee.created",
+  "created_at": "2026-10-03T16:33:21.000000Z",
+  "payload": {
+    "uri": "https://api.scheduling.example/scheduled_events/EV-1011/invitees/IN-5011",
+    "name": "Chris",
+    "first_name": "Chris",
+    "last_name": "",
+    "status": "active",
+    "rescheduled": false,
+    "old_invitee": null,
+    "new_invitee": null,
+    "timezone": "America/Los_Angeles",
+    "text_reminder_number": null,
+    "questions_and_answers": [
+      {
+        "question": "Practice name",
+        "answer": "Valley Health"
+      },
+      {
+        "question": "How many providers are in your practice?",
+        "answer": "2"
+      }
+    ],
+    "scheduled_event": {
+      "uri": "https://api.scheduling.example/scheduled_events/EV-1011",
+      "name": "Spruce Product Demo",
+      "start_time": "2026-10-16T16:00:00.000000Z",
+      "end_time": "2026-10-16T16:30:00.000000Z"
+    },
+    "cancellation": null
+  }
+}

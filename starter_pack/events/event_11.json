@@ -1,0 +1,34 @@
+{
+  "event": "invitee.created",
+  "created_at": "2026-10-04T15:41:30.000000Z",
+  "payload": {
+    "uri": "https://api.scheduling.example/scheduled_events/EV-1013/invitees/IN-5013",
+    "email": "office@pinecrestclinic.com",
+    "name": "Dana Ortiz",
+    "first_name": "Dana",
+    "last_name": "Ortiz",
+    "status": "active",
+    "rescheduled": false,
+    "old_invitee": null,
+    "new_invitee": null,
+    "timezone": "America/Los_Angeles",
+    "text_reminder_number": "+19165550150",
+    "questions_and_answers": [
+      {
+        "question": "Practice name",
+        "answer": "Pinecrest Clinic"
+      },
+      {
+        "question": "How many providers are in your practice?",
+        "answer": "6"
+      }
+    ],
+    "scheduled_event": {
+      "uri": "https://api.scheduling.example/scheduled_events/EV-1013",
+      "name": "Spruce Product Demo",
+      "start_time": "2026-10-12T17:00:00.000000Z",
+      "end_time": "2026-10-12T17:30:00.000000Z"
+    },
+    "cancellation": null
+  }
+}

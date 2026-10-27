@@ -1,0 +1,9 @@
+Lead_ID,First_Name,Last_Name,Email,Company,Phone,Number_of_Providers,Lead_Source,Status,Owner,Demo_Scheduled_At,Last_Modified_Date
+00Q001,Maria,Gonzalez,maria.gonzalez@sunrisepeds.com,Sunrise Pediatrics,(503) 555-0142,3,Website,Demo Scheduled,Jordan Lee,2026-10-08T21:30:00Z,2026-10-01
+00Q002,David,Chen,dchen@bayviewfamilymed.com,Bayview Family Medicine,(415) 555-0178,6,Webinar,New,Jordan Lee,,2026-09-02
+00Q003,Aisha,Patel,aisha@northstarderm.com,Northstar Dermatology,(212) 555-0119,14,Referral,Converted,Priya Shah,,2026-06-20
+00Q004,Sarah,Kim,sarah.kim@harborbh.com,Harbor Behavioral Health,(512) 555-0163,5,Website,Demo Canceled,Jordan Lee,,2026-10-03
+00Q005,Michael,Brown,mbrown@lakesidefamily.com,Lakeside Family Practice,(205) 555-0197,8,Trade Show,New,Jordan Lee,,2026-08-30
+00Q006,Emily,Watson,ewatson@pinecrestclinic.com,Pinecrest Clinic,(916) 555-0124,12,Website,Demo Scheduled,Priya Shah,2026-10-09T18:00:00Z,2026-10-02
+00Q007,Robert,Nguyen,rnguyen@pinecrestclinic.com,Pinecrest Clinic,(916) 555-0131,12,Website,New,Priya Shah,,2026-09-18
+00Q008,Jessica,Alvarez,jalvarez@meridianwomenshealth.com,Meridian Women's Health,(503) 555-0188,4,Scheduling Tool - Demo,Demo Scheduled,Jordan Lee,2026-10-08T16:00:00Z,2026-10-01

@@ -1,0 +1,34 @@
+{
+  "event": "invitee.created",
+  "created_at": "2026-10-01T15:04:12.000000Z",
+  "payload": {
+    "uri": "https://api.scheduling.example/scheduled_events/EV-1001/invitees/IN-5001",
+    "email": "jalvarez@meridianwomenshealth.com",
+    "name": "Jessica Alvarez",
+    "first_name": "Jessica",
+    "last_name": "Alvarez",
+    "status": "active",
+    "rescheduled": false,
+    "old_invitee": null,
+    "new_invitee": null,
+    "timezone": "America/Los_Angeles",
+    "text_reminder_number": "+15035550188",
+    "questions_and_answers": [
+      {
+        "question": "Practice name",
+        "answer": "Meridian Women's Health"
+      },
+      {
+        "question": "How many providers are in your practice?",
+        "answer": "4"
+      }
+    ],
+    "scheduled_event": {
+      "uri": "https://api.scheduling.example/scheduled_events/EV-1001",
+      "name": "Spruce Product Demo",
+      "start_time": "2026-10-08T16:00:00.000000Z",
+      "end_time": "2026-10-08T16:30:00.000000Z"
+    },
+    "cancellation": null
+  }
+}

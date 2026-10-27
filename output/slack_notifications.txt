@@ -1,0 +1,71 @@
+To: @Jordan Lee
+New demo booked: Jessica Alvarez, Meridian Women's Health (4 providers)
+When: Thu Oct 8, 9:00 AM PT
+New Lead 00Q008 created and assigned to you (SMB team, 1 to 9 providers).
+Source: event_01
+
+To: @Jordan Lee
+Demo booked: Maria Gonzalez, Sunrise Pediatrics (3 providers)
+When: Thu Oct 8, 2:30 PM PT
+Lead 00Q001: status changed from Working to Demo Scheduled.
+Source: event_03
+
+To: @Priya Shah
+Demo booked: Emily Watson, Pinecrest Clinic (12 providers)
+When: Wed Oct 7, 1:00 PM PT
+Lead 00Q006: status changed from Working to Demo Scheduled.
+Source: event_04
+
+To: @Priya Shah
+Demo rescheduled: Emily Watson, Pinecrest Clinic (12 providers)
+New time: Fri Oct 9, 11:00 AM PT (was Wed Oct 7, 1:00 PM PT)
+Lead 00Q006 updated with the new time.
+Source: event_05
+
+To: #demo-handoff-review (cc @Jordan Lee, @Priya Shah)
+Needs review: Lena Fischer at Coastal Cardiology Associates
+Demo: Thu Oct 15, 3:00 PM PT
+Problem: Provider count "not sure - somewhere around 8-12?" straddles the 10-provider line between Jordan Lee and Priya Shah, so the owner is unclear.
+To resolve: Confirm the provider count (or pick an owner), then create the Lead.
+Nothing was changed in Salesforce.
+Booking: lfischer@coastalcardiology.com | https://api.scheduling.example/scheduled_events/EV-1010/invitees/IN-5010
+Source: event_07
+
+To: #demo-handoff-review (cc @Jordan Lee)
+Needs review: Chris at Valley Health
+Demo: Fri Oct 16, 9:00 AM PT
+Problem: No email address, so the booking can't be matched to Salesforce.
+Problem: No last name (Salesforce requires one on a Lead).
+By size (2 providers) it would go to Jordan Lee.
+To resolve: Get their email from the booking in the scheduling tool and check Salesforce for an existing Lead.
+To resolve: Add their last name.
+Nothing was changed in Salesforce.
+Booking: no email given | https://api.scheduling.example/scheduled_events/EV-1011/invitees/IN-5011
+Source: event_08
+
+To: @Jordan Lee
+Demo canceled: Sarah Kim, Harbor Behavioral Health (5 providers)
+Was: Tue Oct 6, 10:00 AM PT
+Reason given: "We've decided to stay with our current vendor for now."
+Lead 00Q004 moved to Demo Canceled.
+Source: event_09
+
+To: #demo-handoff-review (cc @Priya Shah)
+Needs review: Aisha Patel at Northstar Dermatology
+Demo: Tue Oct 13, 11:00 AM PT (2:00 PM EDT their time)
+Problem: Lead 00Q003 is already Converted (it's now an Account and Contact).
+To resolve: Check the Account and any open Opportunity, decide if this is new business (like another location) or a repeat booking, and log the demo there.
+Nothing was changed in Salesforce.
+Booking: aisha@northstarderm.com | https://api.scheduling.example/scheduled_events/EV-1012/invitees/IN-5012
+Source: event_10
+
+To: #demo-handoff-review (cc @Priya Shah, @Jordan Lee)
+Needs review: Dana Ortiz at Pinecrest Clinic
+Demo: Mon Oct 12, 10:00 AM PT
+Problem: The practice already has 2 Leads owned by Priya Shah (12 providers on file), but 6 providers would assign Jordan Lee.
+Already in Salesforce at this practice: Emily Watson (00Q006, Priya Shah, demo Fri Oct 9, 11:00 AM PT); Robert Nguyen (00Q007, Priya Shah).
+office@pinecrestclinic.com looks like a shared inbox, so later bookings from it may be a different person.
+To resolve: Confirm whether Dana works at the same location. If so, Priya Shah keeps the practice; if it's a separate location, create the Lead for Jordan Lee.
+Nothing was changed in Salesforce.
+Booking: office@pinecrestclinic.com | https://api.scheduling.example/scheduled_events/EV-1013/invitees/IN-5013
+Source: event_11

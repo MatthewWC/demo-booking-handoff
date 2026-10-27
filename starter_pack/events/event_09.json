@@ -1,0 +1,38 @@
+{
+  "event": "invitee.canceled",
+  "created_at": "2026-10-03T19:45:10.000000Z",
+  "payload": {
+    "uri": "https://api.scheduling.example/scheduled_events/EV-0988/invitees/IN-4988",
+    "email": "sarah.kim@harborbh.com",
+    "name": "Sarah Kim",
+    "first_name": "Sarah",
+    "last_name": "Kim",
+    "status": "canceled",
+    "rescheduled": false,
+    "old_invitee": null,
+    "new_invitee": null,
+    "timezone": "America/Los_Angeles",
+    "text_reminder_number": null,
+    "questions_and_answers": [
+      {
+        "question": "Practice name",
+        "answer": "Harbor Behavioral Health"
+      },
+      {
+        "question": "How many providers are in your practice?",
+        "answer": "5"
+      }
+    ],
+    "scheduled_event": {
+      "uri": "https://api.scheduling.example/scheduled_events/EV-0988",
+      "name": "Spruce Product Demo",
+      "start_time": "2026-10-06T17:00:00.000000Z",
+      "end_time": "2026-10-06T17:30:00.000000Z"
+    },
+    "cancellation": {
+      "canceled_by": "Sarah Kim",
+      "reason": "We've decided to stay with our current vendor for now.",
+      "canceler_type": "invitee"
+    }
+  }
+}
