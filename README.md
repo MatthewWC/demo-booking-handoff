@@ -41,7 +41,7 @@ Optional TypeScript check: `bun install`, then `bun run typecheck`.
 
 ## Download and double-click (no Bun needed)
 
-Every push to `main` publishes a new [release](https://github.com/MatthewWC/demo-booking-handoff/releases), bumping the patch number (v0.0.1, v0.0.2, ...). Each release has a ready-to-run bundle for each system: the program plus a copy of the starter pack. Unzip it and double-click `handoff` (`handoff.exe` on Windows). The three output files land in an `output` folder right next to it.
+Every push to `main` publishes a new [release](https://github.com/MatthewWC/demo-booking-handoff/releases), bumping the patch number (v0.0.1, v0.0.2, ...). From v0.0.2 on, each release has a ready-to-run bundle for each system: the program plus a copy of the starter pack. Unzip it and double-click `handoff` (`handoff.exe` on Windows). The three output files land in an `output` folder right next to it.
 
 | Download | For |
 |---|---|
@@ -58,10 +58,10 @@ Each release also has the bare executables (`handoff-windows-x64.exe` and so on)
 
 - **Repeat deliveries:** the same event for the same booking is skipped (event_02).
 - **Emails** match regardless of capital letters and extra spaces (event_03).
-- **Reschedules** arrive as two events: a new booking that names the old one, and a cancel of the old slot. The new booking moves the demo time. The cancel half is skipped, so the demo is never marked canceled, whichever order the two arrive in (events 05 and 06).
+- **Reschedules** arrive as two events: a new booking that names the old one, and a cancel of the old slot. The new booking moves the demo time. The cancel isn't a real cancel, so it's skipped and the demo is never marked canceled, whichever order the two arrive in (events 05 and 06).
 - **Cancels** apply only when the canceled time matches the demo on the Lead, so an old or out-of-order cancel can't undo a newer booking. A cancel also clears Demo_Scheduled_At, so canceled demos don't show up in "demos this week" reports (event_09).
-- **Flags change nothing in Salesforce.** They go to one review channel with the likely owner tagged, and say what's needed to resolve them. The script flags:
-  - a provider count that could fall on either side of the 10-provider line (event_07)
+- **Flags change nothing in Salesforce.** They go to one review channel (set with `--review-channel`) with the likely owner tagged, and say what's needed to resolve them. The script flags:
+  - a provider count that could fall on either side of the 10-provider cutoff (event_07)
   - a booking with no email or no last name (event_08)
   - a booking from a Converted Lead (event_10)
   - a new person at a practice that already belongs to a different rep than the size rule would pick (event_11)
@@ -72,5 +72,5 @@ Each release also has the bare executables (`handoff-windows-x64.exe` and so on)
 ## What changes in production
 
 - **Routing moves into Salesforce.** The owners and the provider cutoff are options for now, so changing a rep doesn't need a code change, but it's still one owner per team. For real, the script would record the facts (provider count, team) and let Salesforce's assignment rules or the scheduling tool's round robin pick the rep, so Sales Ops can add or move reps on their own.
-- **Each event is handled on its own.** Real webhooks arrive one at a time, days apart, so the script can't count on remembering earlier events from the same run. The key checks already look at the Lead itself. The booking ID would also be saved on the Salesforce record, so later events (like the cancel half of a reschedule) can find it and a repeat delivery never posts a second flag.
+- **Each event is handled on its own.** Real webhooks arrive one at a time, days apart, so the script can't count on remembering earlier events from the same run. The key checks already look at the Lead itself. The booking ID would also be saved on the Salesforce record, so later events (like the cancel that comes with a reschedule) can find it and a repeat delivery never posts a second flag.
 - **Lookups go to Salesforce, not a file.** Instead of loading every Lead, it would look people up by email and use Salesforce's duplicate rules to spot a practice that's already there.

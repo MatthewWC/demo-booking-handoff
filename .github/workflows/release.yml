@@ -1,7 +1,8 @@
 name: Release
 
-# Every push to main checks the code, builds the four executables and publishes them as
-# a new release, bumping the patch number from the last release tag: v0.0.1, v0.0.2, ...
+# Every push to main checks the code, builds the four executables plus a double-click bundle
+# per system, and publishes them as a new release, bumping the patch number from the last
+# release tag: v0.0.1, v0.0.2, ...
 on:
   push:
     branches: [main]

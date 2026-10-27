@@ -8,7 +8,8 @@
 // Run with Bun, which runs TypeScript directly:
 //   bun handoff.ts           the brief's rules on the starter pack
 //   bun handoff.ts --help    every option, like the owners or the provider cutoff
-// Or build a single executable (bun run build) and run that the same way.
+// Or build a single executable (bun run build) and run that the same way. Each GitHub release
+// also has a double-click bundle per system: the executable plus a copy of the starter pack.
 
 import { dlopen, FFIType, ptr } from "bun:ffi";
 import { basename, dirname, join, resolve } from "path";
@@ -106,7 +107,7 @@ interface WebhookEvent {
     name?: string;
     first_name?: string;
     last_name?: string;
-    rescheduled?: boolean; // on a cancel: true when it's the old half of a reschedule
+    rescheduled?: boolean; // on a cancel: true when it's part of a reschedule (the old time slot)
     old_invitee?: string | null; // on a booking: the booking it replaces, when it's a reschedule
     new_invitee?: string | null; // on a cancel: the booking that replaced it
     timezone?: string;
@@ -138,7 +139,7 @@ const leadsByEmail = new Map(leads.filter((l) => l.Email).map((l) => [cleanEmail
 let lastLeadNumber = Math.max(0, ...leads.map((l) => Number(l.Lead_ID.replace(/\D/g, "")) || 0));
 // "<event type> <booking ID>" -> the event file that first had it, to catch repeat deliveries
 const seen = new Map<string, string>();
-// booking ID -> the booking this run applied, to connect the two halves of a reschedule
+// booking ID -> the booking this run applied, to link a reschedule's new booking to its cancel
 const applied = new Map<string, { file: string; start: string; lead: Lead }>();
 
 // ---------- Main ----------
@@ -363,15 +364,15 @@ function handleCancel(event: WebhookEvent): Result {
   const slot = start ? teamTime(start) : "unknown time";
 
   // A reschedule sends a new booking plus a cancel of the old slot. The new booking does the work,
-  // so this half must not mark the demo canceled, whichever order the two arrive in.
+  // so this cancel must not mark the demo canceled, whichever order the two arrive in.
   if (p.rescheduled) {
     const replacement = p.new_invitee ? applied.get(p.new_invitee) : undefined;
     return {
       action: "SKIPPED",
       reason: replacement
-        ? `cancellation of ${name}'s ${slot} slot: it's the old half of a reschedule that ${replacement.file} already applied ` +
-          `(this cancel arrived after the new booking), so the demo stays ${teamTime(replacement.start)}`
-        : `cancellation of ${name}'s ${slot} slot: it's the old half of a reschedule, so the Lead stays as is until the new booking arrives`,
+        ? `cancellation of ${name}'s old ${slot} slot: it's part of the reschedule ${replacement.file} already applied, ` +
+          `not a real cancel (it arrived after the new booking), so the demo stays ${teamTime(replacement.start)}`
+        : `cancellation of ${name}'s old ${slot} slot: it's part of a reschedule, not a real cancel, so the Lead stays as is until the new booking arrives`,
     };
   }
 
@@ -422,7 +423,7 @@ function flag(event: WebhookEvent, who: string, when: string, cc: string[], prob
   };
 }
 
-// Rule 4: 1 to 9 providers goes to SMB, 10 or more to Mid-Market. Only a clear answer picks an owner.
+// Rule 4: under the cutoff (10 by default) goes to SMB, at or over it to Mid-Market. Only a clear answer picks an owner.
 function ownerBySize(answer: string): { owner: string; count: string } | { problem: Problem } {
   const numbers = (answer.match(/\d+/g) ?? []).map(Number);
   const owners = unique(numbers.map((n) => (n >= MID_MARKET_MIN ? MID_MARKET_OWNER : SMB_OWNER)));
