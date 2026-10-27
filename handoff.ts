@@ -10,7 +10,8 @@
 //   bun handoff.ts --help    every option, like the owners or the provider cutoff
 // Or build a single executable (bun run build) and run that the same way.
 
-import { basename, join, resolve } from "path";
+import { dlopen, FFIType, ptr } from "bun:ffi";
+import { basename, dirname, join, resolve } from "path";
 import { parseArgs } from "util";
 import { VERSION } from "./version";
 
@@ -40,7 +41,8 @@ const HELP = [
   "the Slack messages and a run log to the output folder.",
   "",
   `Usage: ${COMMAND} [options]`,
-  "Paths are relative to the folder you run it from.",
+  "Reads starter_pack/ next to the program if it's there, otherwise in the folder you run it from.",
+  "Paths you type are relative to the folder you run it from.",
   "",
   "Options:",
   ...[
@@ -62,6 +64,11 @@ const HELP = [
   `  ${COMMAND} --smb-owner "Sam Rivera" --mid-market-min 15`,
   `  ${COMMAND} --leads exports/leads.csv --out runs/latest`,
 ].join("\n");
+
+// Where the default paths start. In the download bundle, starter_pack sits next to the program, so a
+// double-click works whichever folder the system starts it in. Otherwise it's the folder you run it from.
+const PROGRAM_DIR = dirname(process.execPath);
+const BASE_DIR = listEventFiles(join(PROGRAM_DIR, DEFAULTS.events)).length ? PROGRAM_DIR : process.cwd();
 
 const {
   eventsDir: EVENTS_DIR,
@@ -166,6 +173,7 @@ console.log(
     `${counts.SKIPPED} skipped, ${counts.FLAGGED} flagged, ${counts.ERROR} errors.`,
 );
 console.log(`Wrote updated_salesforce_leads.csv, slack_notifications.txt and run_log.txt to ${OUTPUT_DIR}`);
+pauseIfDoubleClicked();
 
 // ---------- One event ----------
 
@@ -598,10 +606,9 @@ function parseOptions() {
   }
 }
 
-// Paths, defaults included, are relative to the folder you run the command from. That way the
-// script and a built executable behave the same (an executable has no script folder to start from).
+// Paths you type are relative to the folder you run the command from. Defaults start at BASE_DIR.
 function pathOption(value: string | undefined, fallback: string): string {
-  return resolve(value || fallback);
+  return value ? resolve(value) : resolve(BASE_DIR, fallback);
 }
 
 function textOption(option: string, value: string | undefined, fallback: string): string {
@@ -612,7 +619,25 @@ function textOption(option: string, value: string | undefined, fallback: string)
 
 function fail(message: string): never {
   console.error(`Error: ${message}\nRun "${COMMAND} --help" to see the options.`);
+  pauseIfDoubleClicked();
   process.exit(1);
+}
+
+// Double-clicked on Windows, the console window closes the moment the program ends. When no shell shares
+// the window (this program is the only one attached to it), wait for Enter so the result stays readable.
+function pauseIfDoubleClicked(): void {
+  if (process.platform !== "win32" || !process.stdin.isTTY) return;
+  try {
+    const kernel32 = dlopen("kernel32.dll", {
+      GetConsoleProcessList: { args: [FFIType.ptr, FFIType.u32], returns: FFIType.u32 },
+    });
+    const ids = new Uint32Array(4);
+    const attached = kernel32.symbols.GetConsoleProcessList(ptr(ids), ids.length);
+    kernel32.close();
+    if (attached === 1) prompt("Press Enter to close this window.");
+  } catch {
+    // If Windows won't say, just finish as usual.
+  }
 }
 
 // ---------- CSV ----------

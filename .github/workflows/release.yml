@@ -56,8 +56,40 @@ jobs:
           ./dist/handoff-linux-x64
           git diff --exit-code output/ # the Linux executable gives the same results
 
+      # A bundle per system: a folder with the program, a copy of the starter pack and a short
+      # README, so it can be downloaded, unzipped and double-clicked.
+      - name: Package the download bundles
+        run: |
+          mkdir bundles
+          for platform in windows-x64 macos-arm64 macos-x64 linux-x64; do
+            folder="bundles/handoff-$platform"
+            mkdir "$folder"
+            if [ "$platform" = windows-x64 ]; then
+              cp dist/handoff-windows-x64.exe "$folder/handoff.exe"
+            else
+              cp "dist/handoff-$platform" "$folder/handoff"
+              chmod +x "$folder/handoff"
+            fi
+            cp -r starter_pack "$folder/"
+            cp packaging/README.txt "$folder/"
+          done
+          cd bundles
+          # zip for Windows and Mac, which open it with a double-click; tar.gz keeps Linux's run permission
+          for platform in windows-x64 macos-arm64 macos-x64; do zip -qr "handoff-$platform.zip" "handoff-$platform"; done
+          tar -czf handoff-linux-x64.tar.gz handoff-linux-x64
+          ls -l *.zip *.tar.gz
+
+      - name: Test the Linux bundle from another folder
+        run: |
+          mkdir /tmp/try
+          tar -xzf bundles/handoff-linux-x64.tar.gz -C /tmp/try
+          cd / && /tmp/try/handoff-linux-x64/handoff # started from /, it must still find its own starter_pack
+          diff -r /tmp/try/handoff-linux-x64/output "$GITHUB_WORKSPACE/output"
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v${{ steps.version.outputs.number }}
-        run: gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "$TAG" --generate-notes
+        run: |
+          gh release create "$TAG" dist/* bundles/*.zip bundles/*.tar.gz \
+            --target "$GITHUB_SHA" --title "$TAG" --generate-notes
