@@ -32,6 +32,28 @@ Running it again rebuilds the outputs from the starter pack, so the results are 
 
 Optional TypeScript check: `npm install`, then `npm run typecheck`.
 
+## Build a single executable (optional)
+
+Bun can bundle the script and its runtime into one file, so whoever runs it doesn't need Node:
+
+```
+npm install
+npm run build
+```
+
+That builds four files into `dist/`. Each is 90 to 115 MB, because the runtime is inside.
+
+| File | For |
+|---|---|
+| `handoff-windows-x64.exe` | Windows |
+| `handoff-macos-arm64` | Macs with Apple Silicon (M1 or newer) |
+| `handoff-macos-x64` | Intel Macs |
+| `handoff-linux-x64` | Linux |
+
+Run one from the project folder with the same options, for example `./dist/handoff-macos-arm64 --help`. To build just one, use `npm run build:windows`, `build:mac`, `build:mac-intel` or `build:linux`.
+
+The Mac builds aren't notarized by Apple. If macOS blocks a copy you downloaded, clear the download flag first: `xattr -d com.apple.quarantine handoff-macos-arm64`.
+
 ## Decisions beyond the written rules
 
 - **Repeat deliveries:** the same event for the same booking is skipped (event_02).

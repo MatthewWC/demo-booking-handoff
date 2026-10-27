@@ -8,9 +8,10 @@
 // Run (Node 22.18 or newer runs TypeScript directly, nothing to install):
 //   node handoff.ts           the brief's rules on the starter pack
 //   node handoff.ts --help    every option, like the owners or the provider cutoff
+// Or build a single executable with Bun (npm run build) and run that the same way.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 // ---------- Options ----------
@@ -28,13 +29,18 @@ const DEFAULTS = {
   timezone: "America/Los_Angeles",
 };
 
+// How it was started, for the help text: "node handoff.ts", or the executable's own name once it's built.
+const RUNTIME = basename(process.execPath).replace(/\.exe$/i, "");
+const COMMAND = RUNTIME === "node" || RUNTIME === "bun" ? `${RUNTIME} handoff.ts` : basename(process.execPath);
+
 const HELP = [
   "Demo booking handoff",
   "",
   "Reads booking events in order, updates the Salesforce Leads export, and writes",
   "the Slack messages and a run log to the output folder.",
   "",
-  "Usage: node handoff.ts [options]",
+  `Usage: ${COMMAND} [options]`,
+  "Paths are relative to the folder you run it from.",
   "",
   "Options:",
   ...[
@@ -51,9 +57,9 @@ const HELP = [
   ].map(([option, what, fallback]) => `  ${option.padEnd(28)}${what.padEnd(40)}${fallback ? `default: ${fallback}` : ""}`.trimEnd()),
   "",
   "Examples:",
-  "  node handoff.ts",
-  '  node handoff.ts --smb-owner "Sam Rivera" --mid-market-min 15',
-  "  node handoff.ts --leads exports/leads.csv --out runs/latest",
+  `  ${COMMAND}`,
+  `  ${COMMAND} --smb-owner "Sam Rivera" --mid-market-min 15`,
+  `  ${COMMAND} --leads exports/leads.csv --out runs/latest`,
 ].join("\n");
 
 const {
@@ -551,8 +557,9 @@ function readOptions() {
     reviewChannel: textOption("review-channel", flags["review-channel"], DEFAULTS.reviewChannel),
     timezone,
   };
-  if (!existsSync(options.eventsDir)) fail(`can't find the events folder ${options.eventsDir}`);
-  if (!existsSync(options.leadsFile)) fail(`can't find the Leads file ${options.leadsFile}`);
+  const where = "Run it from the project folder, or point to it with";
+  if (!existsSync(options.eventsDir)) fail(`can't find the events folder ${options.eventsDir}. ${where} --events`);
+  if (!existsSync(options.leadsFile)) fail(`can't find the Leads file ${options.leadsFile}. ${where} --leads`);
   return options;
 }
 
@@ -577,9 +584,10 @@ function parseOptions() {
   }
 }
 
-// Paths you type are relative to where you run the command. The defaults are relative to this script.
+// Paths, defaults included, are relative to the folder you run the command from. That way the
+// script and a built executable behave the same (an executable has no script folder to start from).
 function pathOption(value: string | undefined, fallback: string): string {
-  return value ? resolve(value) : join(import.meta.dirname, fallback);
+  return resolve(value || fallback);
 }
 
 function textOption(option: string, value: string | undefined, fallback: string): string {
@@ -589,7 +597,7 @@ function textOption(option: string, value: string | undefined, fallback: string)
 }
 
 function fail(message: string): never {
-  console.error(`Error: ${message}\nRun "node handoff.ts --help" to see the options.`);
+  console.error(`Error: ${message}\nRun "${COMMAND} --help" to see the options.`);
   process.exit(1);
 }
 
