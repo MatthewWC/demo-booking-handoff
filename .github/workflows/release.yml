@@ -57,6 +57,21 @@ jobs:
           ./dist/handoff-linux-x64
           git diff --exit-code output/ # the Linux executable gives the same results
 
+      # Bun gives the Apple-chip Mac executable a fresh signature, but the Intel one keeps Bun's
+      # own signature, which stops matching once our code is inside, so macOS refuses to open the
+      # download at all. Re-sign it ad hoc like the Apple-chip one (no Apple account needed), so
+      # the usual Open Anyway step works. rcodesign can sign Mac executables on Linux.
+      - name: Sign the Intel Mac executable
+        run: |
+          version=0.29.0
+          sha256=dbe85cedd8ee4217b64e9a0e4c2aef92ab8bcaaa41f20bde99781ff02e600002 # of its Linux download
+          name="apple-codesign-$version-x86_64-unknown-linux-musl"
+          curl -fsSL -o "$RUNNER_TEMP/$name.tar.gz" \
+            "https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F$version/$name.tar.gz"
+          echo "$sha256  $RUNNER_TEMP/$name.tar.gz" | sha256sum --check -
+          tar -xzf "$RUNNER_TEMP/$name.tar.gz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/$name/rcodesign" sign dist/handoff-macos-x64
+
       # A bundle per system: a folder with the program, a copy of the starter pack and a short
       # README, so it can be downloaded, unzipped and double-clicked.
       - name: Package the download bundles
